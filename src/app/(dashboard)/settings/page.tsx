@@ -21,8 +21,9 @@ import {
 import { updateProfile, updateEmail, updatePassword } from '@/app/actions/auth'
 import { cn } from '@/lib/utils'
 import { AddMemberDialog } from '@/components/members/add-member-dialog'
-import { InviteMemberDialog } from '@/components/members/invite-member-dialog'
-
+import { getWorkspaceMembers, removeMember, updateMemberRole } from '@/lib/api'
+import { useWorkspaceStore } from '@/store/use-workspace-store'
+import { toast } from 'sonner'
 
 export default function SettingsPage() {
     const [loading, setLoading] = useState(false)
@@ -35,27 +36,64 @@ export default function SettingsPage() {
         projectUpdates: false,
     })
     const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
-    const [isInviteMemberOpen, setIsInviteMemberOpen] = useState(false)
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
     const fileInputRef = React.useRef<HTMLInputElement>(null)
 
-    // Mock members state
-    const [members, setMembers] = useState([
-        { id: '1', name: 'John Doe', email: 'john@example.com', role: 'admin', avatar: '/placeholder-user.jpg' },
-        { id: '2', name: 'Alice Smith', email: 'alice@example.com', role: 'member', avatar: '/placeholder.jpg' },
-        { id: '3', name: 'Bob Jones', email: 'bob@example.com', role: 'member', avatar: '/placeholder.jpg' },
-    ])
+    // Workspace Members Logic
+    const { currentWorkspace } = useWorkspaceStore()
+    const [members, setMembers] = useState<any[]>([])
+    const [membersLoading, setMembersLoading] = useState(false)
 
-    const handleDeleteMember = (id: string) => {
-        if (confirm('Are you sure you want to remove this member?')) {
-            setMembers(members.filter(m => m.id !== id))
-            setMessage({ type: 'success', text: 'Member removed successfully' })
+    React.useEffect(() => {
+        if (currentWorkspace) {
+            loadMembers()
+        }
+    }, [currentWorkspace])
+
+    const loadMembers = async () => {
+        if (!currentWorkspace) return
+        setMembersLoading(true)
+        try {
+            const data = await getWorkspaceMembers(currentWorkspace.id)
+            // Transform data to flat structure for UI
+            const formattedMembers = data?.map((m: any) => ({
+                id: m.user.id,
+                name: m.user.full_name || 'Unnamed User',
+                email: m.user.email,
+                avatar: m.user.avatar_url,
+                role: m.role
+            })) || []
+            setMembers(formattedMembers)
+        } catch (error) {
+            console.error("Failed to load members", error)
+            toast.error("Failed to load workspace members")
+        } finally {
+            setMembersLoading(false)
         }
     }
 
-    const handleRoleChange = (id: string, newRole: string) => {
-        setMembers(members.map(m => m.id === id ? { ...m, role: newRole } : m))
-        setMessage({ type: 'success', text: 'Member role updated' })
+    const handleDeleteMember = async (userId: string) => {
+        if (!currentWorkspace) return
+        if (confirm('Are you sure you want to remove this member?')) {
+            try {
+                await removeMember(currentWorkspace.id, userId)
+                toast.success('Member removed successfully')
+                loadMembers()
+            } catch (error: any) {
+                toast.error(error.message || 'Failed to remove member')
+            }
+        }
+    }
+
+    const handleRoleChange = async (userId: string, newRole: string) => {
+        if (!currentWorkspace) return
+        try {
+            await updateMemberRole(currentWorkspace.id, userId, newRole)
+            toast.success('Member role updated')
+            loadMembers()
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to update user role')
+        }
     }
 
     const handleProfileSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -144,6 +182,11 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground mt-2">
                     Manage your account settings and preferences
                 </p>
+                {currentWorkspace && (
+                    <p className="text-sm text-primary mt-1 font-medium">
+                        Current Workspace: {currentWorkspace.name}
+                    </p>
+                )}
             </div>
 
             {message && (
@@ -461,58 +504,61 @@ export default function SettingsPage() {
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="space-y-4">
-                                {members.map((member) => (
-                                    <div key={member.id} className="flex items-center justify-between p-4 rounded-xl border bg-card/50 hover:bg-accent/50 transition-colors">
-                                        <div className="flex items-center gap-4">
-                                            <Avatar>
-                                                <AvatarImage src={member.avatar} />
-                                                <AvatarFallback>{member.name[0]}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-medium">{member.name}</p>
-                                                <p className="text-sm text-muted-foreground">{member.email}</p>
+                                {membersLoading ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <p className="text-muted-foreground">Loading members...</p>
+                                    </div>
+                                ) : (
+                                    members.map((member) => (
+                                        <div key={member.id} className="flex items-center justify-between p-4 rounded-xl border bg-card/50 hover:bg-accent/50 transition-colors">
+                                            <div className="flex items-center gap-4">
+                                                <Avatar>
+                                                    <AvatarImage src={member.avatar} />
+                                                    <AvatarFallback>{member.name[0]}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <p className="font-medium">{member.name}</p>
+                                                    <p className="text-sm text-muted-foreground">{member.email}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <Select
+                                                    value={member.role}
+                                                    onValueChange={(value) => handleRoleChange(member.id, value)}
+                                                >
+                                                    <SelectTrigger className="w-[110px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="owner">Owner</SelectItem>
+                                                        <SelectItem value="admin">Admin</SelectItem>
+                                                        <SelectItem value="moderator">Moderator</SelectItem>
+                                                        <SelectItem value="member">Member</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-destructive hover:bg-destructive/10"
+                                                    onClick={() => handleDeleteMember(member.id)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <Select
-                                                value={member.role}
-                                                onValueChange={(value) => handleRoleChange(member.id, value)}
-                                            >
-                                                <SelectTrigger className="w-[110px]">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="admin">Admin</SelectItem>
-                                                    <SelectItem value="member">Member</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-destructive hover:bg-destructive/10"
-                                                onClick={() => handleDeleteMember(member.id)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))
+                                )}
+                                {!membersLoading && members.length === 0 && (
+                                    <p className="text-muted-foreground text-center py-4">No members found.</p>
+                                )}
                             </div>
                             <div className="pt-4 border-t flex flex-col sm:flex-row gap-3">
                                 <Button
                                     className="flex-1 sm:flex-none"
-                                    variant="outline"
                                     onClick={() => setIsAddMemberOpen(true)}
                                 >
                                     <Plus className="mr-2 h-4 w-4" />
                                     Add Member
-                                </Button>
-                                <Button
-                                    className="flex-1 sm:flex-none"
-                                    onClick={() => setIsInviteMemberOpen(true)}
-                                >
-                                    <Mail className="mr-2 h-4 w-4" />
-                                    Invite Member
                                 </Button>
                             </div>
                         </CardContent>
@@ -521,8 +567,11 @@ export default function SettingsPage() {
             </Tabs>
 
             {/* Member Management Dialogs */}
-            <AddMemberDialog open={isAddMemberOpen} onOpenChange={setIsAddMemberOpen} />
-            <InviteMemberDialog open={isInviteMemberOpen} onOpenChange={setIsInviteMemberOpen} />
+            <AddMemberDialog
+                open={isAddMemberOpen}
+                onOpenChange={setIsAddMemberOpen}
+                onMemberAdded={loadMembers}
+            />
         </div>
     )
 }

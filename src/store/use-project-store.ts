@@ -16,6 +16,7 @@ interface ProjectStore {
 
     // Projects list
     projects: Project[]
+    setProjects: (projects: Project[]) => void
     addProject: (project: Project) => void
     updateProject: (id: string, updates: Partial<Project>) => void
     deleteProject: (id: string) => void
@@ -32,11 +33,10 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     closeCreateDialog: () => set({ isCreateDialogOpen: false }),
 
     // Projects (Mock data initially)
-    projects: [
-        { id: '1', name: 'Marketing Campaign', color: 'bg-blue-500' },
-        { id: '2', name: 'Product Launch', color: 'bg-purple-500' },
-    ],
-    addProject: (project) => set((state) => ({ projects: [...state.projects, project] })),
+    // Projects
+    projects: [],
+    setProjects: (projects) => set({ projects }),
+    addProject: (project) => set((state) => ({ projects: [project, ...state.projects] })),
     updateProject: (id, updates) =>
         set((state) => ({
             projects: state.projects.map((project) =>

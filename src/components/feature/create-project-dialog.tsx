@@ -12,22 +12,19 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
 import { useProjectStore } from '@/store/use-project-store'
+import { useWorkspaceStore } from '@/store/use-workspace-store'
 import { useState, useEffect } from 'react'
 import { toast } from "sonner"
+import { createProject, updateProject as apiUpdateProject } from '@/lib/api'
 
 export function CreateProjectDialog() {
-    const { isCreateDialogOpen, closeCreateDialog, addProject, updateProject, selectedProject } = useProjectStore()
+    const { isCreateDialogOpen, closeCreateDialog, addProject: addProjectToStore, updateProject: updateProjectInStore, selectedProject } = useProjectStore()
+    const { currentWorkspace } = useWorkspaceStore()
     const [name, setName] = useState('')
     const [description, setDescription] = useState('')
     const [color, setColor] = useState('bg-blue-500')
+    const [loading, setLoading] = useState(false)
 
     // Effect to pre-fill form when editing
     useEffect(() => {
@@ -42,28 +39,37 @@ export function CreateProjectDialog() {
         }
     }, [selectedProject, isCreateDialogOpen])
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!name.trim()) return
-
-        if (selectedProject) {
-            updateProject(selectedProject.id, {
-                name,
-                description,
-                color,
-            })
-            toast.success("Project updated successfully")
-        } else {
-            addProject({
-                id: Math.random().toString(36).substr(2, 9),
-                name,
-                description,
-                color,
-            })
-            toast.success("Project created successfully")
+        if (!currentWorkspace) {
+            toast.error("No workspace selected")
+            return
         }
 
-        handleClose()
+        setLoading(true)
+        try {
+            if (selectedProject) {
+                const updates = { name, description, color }
+                await apiUpdateProject(selectedProject.id, updates)
+                updateProjectInStore(selectedProject.id, updates)
+                toast.success("Project updated successfully")
+            } else {
+                const newProject = await createProject(currentWorkspace.id, {
+                    name,
+                    description,
+                    color,
+                })
+                addProjectToStore(newProject)
+                toast.success("Project created successfully")
+            }
+            handleClose()
+        } catch (error: any) {
+            console.error("Failed to save project", error)
+            toast.error(error.message || "Failed to save project")
+        } finally {
+            setLoading(false)
+        }
     }
 
     const handleClose = () => {
@@ -71,8 +77,6 @@ export function CreateProjectDialog() {
         setDescription('')
         setColor('bg-blue-500')
         closeCreateDialog()
-        // We need to clear selectedProject in store, but for now closing dialog is enough
-        // Ideally store should have a clearSelectedProject or closeDialog should handle it
     }
 
     const colors = [
@@ -138,10 +142,13 @@ export function CreateProjectDialog() {
                         <Button type="button" variant="outline" onClick={handleClose}>
                             Cancel
                         </Button>
-                        <Button type="submit">{selectedProject ? 'Save Changes' : 'Create Project'}</Button>
+                        <Button type="submit" disabled={loading}>
+                            {loading ? 'Saving...' : (selectedProject ? 'Save Changes' : 'Create Project')}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
     )
 }
+

@@ -5,9 +5,22 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Home, CheckSquare, Inbox, Briefcase, Plus, Settings, TrendingUp } from 'lucide-react'
+import { Home, CheckSquare, Inbox, Briefcase, Plus, Settings, TrendingUp, ChevronDown, Building2 } from 'lucide-react'
 import { useProjectStore } from '@/store/use-project-store'
 import { toast } from "sonner"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useEffect, useState } from 'react'
+// ... existing imports
+import { getWorkspaces, getProjects, deleteProject as apiDeleteProject } from '@/lib/api'
+import { CreateWorkspaceDialog } from '@/components/workspace/create-workspace-dialog'
+
 const sidebarLinks = [
     { icon: Home, label: 'Home', href: '/home' },
     { icon: CheckSquare, label: 'My Tasks', href: '/my-tasks' },
@@ -17,18 +30,92 @@ const sidebarLinks = [
     { icon: TrendingUp, label: 'Insights', href: '/insights' },
 ]
 
+import { useWorkspaceStore } from '@/store/use-workspace-store'
+
 export function Sidebar() {
     const pathname = usePathname()
-    const { projects, openCreateDialog, deleteProject, openEditDialog } = useProjectStore()
+    // Use project store
+    const { projects, openCreateDialog, deleteProject, openEditDialog, setProjects } = useProjectStore()
+
+    // Use workspace store
+    const { workspaces, currentWorkspace, setCurrentWorkspace, setWorkspaces } = useWorkspaceStore()
+
+    useEffect(() => {
+        loadWorkspaces()
+    }, [])
+
+    useEffect(() => {
+        if (currentWorkspace) {
+            loadProjects()
+        } else {
+            setProjects([])
+        }
+    }, [currentWorkspace])
+
+    const loadWorkspaces = async () => {
+        try {
+            const data = await getWorkspaces()
+            setWorkspaces(data || [])
+        } catch (error) {
+            console.error("Failed to load workspaces", error)
+        }
+    }
+
+    const loadProjects = async () => {
+        if (!currentWorkspace) return
+        try {
+            const data = await getProjects(currentWorkspace.id)
+            setProjects(data || [])
+        } catch (error) {
+            console.error("Failed to load projects", error)
+            toast.error("Failed to load projects")
+        }
+    }
+
+    const handleDeleteProject = async (projectId: string) => {
+        // Optimistic update or wait? Let's wait.
+        try {
+            await apiDeleteProject(projectId)
+            deleteProject(projectId) // Update store
+            toast.success("Project deleted")
+        } catch (error) {
+            console.error("Failed to delete project", error)
+            toast.error("Failed to delete project")
+        }
+    }
 
     return (
         <div className="flex h-full w-64 flex-col border-r bg-background">
             <div className="flex h-14 items-center border-b px-4 lg:h-[60px]">
-                <Link href="/" className="flex items-center gap-2 font-semibold group">
-                    <div className="h-6 w-6 rounded-md bg-gradient-to-br from-primary to-primary/60 shadow-sm group-hover:shadow-md transition-shadow" />
-                    <span className="text-lg">TaskApp</span>
-                </Link>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="w-full justify-between px-2 hover:bg-muted/50">
+                            <div className="flex items-center gap-2">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                                    <Building2 className="h-4 w-4" />
+                                </div>
+                                <span className="font-semibold truncate max-w-[120px]">
+                                    {currentWorkspace?.name || "Select Workspace"}
+                                </span>
+                            </div>
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="start">
+                        <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+                        {workspaces.map((ws) => (
+                            <DropdownMenuItem key={ws.id} onClick={() => setCurrentWorkspace(ws)}>
+                                {ws.name} {currentWorkspace?.id === ws.id && "✓"}
+                            </DropdownMenuItem>
+                        ))}
+                        <DropdownMenuSeparator />
+                        <div className="p-2">
+                            <CreateWorkspaceDialog onWorkspaceCreated={loadWorkspaces} />
+                        </div>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
+
 
             <div className="flex-1 overflow-hidden">
                 <ScrollArea className="h-full">
@@ -107,8 +194,7 @@ export function Sidebar() {
                                                     e.preventDefault()
                                                     e.stopPropagation()
                                                     if (confirm("Are you sure you want to delete this project?")) {
-                                                        deleteProject(project.id)
-                                                        toast.success("Project deleted")
+                                                        handleDeleteProject(project.id)
                                                     }
                                                 }}
                                             >

@@ -6,8 +6,11 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Calendar, CheckCircle2, Plus, TrendingUp, Clock, AlertCircle } from 'lucide-react'
 import { useTaskStore } from '@/store/use-task-store'
+import { useWorkspaceStore } from '@/store/use-workspace-store'
+import { useProjectStore } from '@/store/use-project-store'
 import { cn } from '@/lib/utils'
 import { DashboardCharts } from '@/components/analytics/dashboard-charts'
+import { CreateWorkspaceDialog } from '@/components/workspace/create-workspace-dialog'
 
 const priorityColors = {
     low: 'bg-blue-100 text-blue-800',
@@ -17,11 +20,30 @@ const priorityColors = {
 
 export default function HomePage() {
     const { tasks, openCreateDialog, openDrawer } = useTaskStore()
+    const { currentWorkspace } = useWorkspaceStore()
+    const { projects } = useProjectStore()
 
     // Calculate stats
-    const completedTasks = 0 // Would come from completed tasks
-    const dueSoonTasks = tasks.filter(t => t.dueDate).length
+    const completedTasks = tasks.filter(t => t.completed).length
+    const dueSoonTasks = tasks.filter(t => t.dueDate).length // simplistic check
     const overdueTasks = 0 // Would calculate based on actual dates
+
+    if (!currentWorkspace) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+                <div className="p-4 rounded-full bg-muted">
+                    <TrendingUp className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h2 className="text-2xl font-bold tracking-tight">Welcome to TaskApp</h2>
+                <p className="text-muted-foreground max-w-sm">
+                    Create a workspace to get started with your projects and tasks.
+                </p>
+                <div className="pt-4">
+                    <CreateWorkspaceDialog />
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="flex flex-col gap-6">
@@ -36,7 +58,7 @@ export default function HomePage() {
                         })()}, User
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Here's what's happening today.
+                        Here's what's happening today in {currentWorkspace.name}.
                     </p>
                 </div>
                 <Button
@@ -60,7 +82,7 @@ export default function HomePage() {
                     <CardContent>
                         <div className="text-2xl font-bold">{completedTasks}</div>
                         <p className="text-xs text-muted-foreground">
-                            <span className="text-green-600 font-medium">+12%</span> from last week
+                            This week
                         </p>
                     </CardContent>
                 </Card>
@@ -75,7 +97,7 @@ export default function HomePage() {
                     <CardContent>
                         <div className="text-2xl font-bold">{dueSoonTasks}</div>
                         <p className="text-xs text-muted-foreground">
-                            Tasks due in the next 7 days
+                            Next 7 days
                         </p>
                     </CardContent>
                 </Card>
@@ -90,7 +112,7 @@ export default function HomePage() {
                     <CardContent>
                         <div className="text-2xl font-bold">{overdueTasks}</div>
                         <p className="text-xs text-muted-foreground">
-                            Tasks past their due date
+                            Tasks past due
                         </p>
                     </CardContent>
                 </Card>
@@ -180,29 +202,31 @@ export default function HomePage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
-                        {[
-                            { name: 'Marketing Campaign', tasks: 12, members: 5, color: 'bg-blue-500' },
-                            { name: 'Product Launch', tasks: 8, members: 3, color: 'bg-purple-500' },
-                            { name: 'Website Redesign', tasks: 15, members: 4, color: 'bg-green-500' },
-                        ].map((project) => (
-                            <div
-                                key={project.name}
-                                className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 hover:shadow-sm cursor-pointer transition-all duration-200"
-                            >
-                                <div className={`h-10 w-10 rounded-lg ${project.color} flex items-center justify-center text-white font-semibold`}>
-                                    {project.name[0]}
+                    {projects.length === 0 ? (
+                        <div className="text-center text-muted-foreground py-8">
+                            No projects found.
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {projects.slice(0, 5).map((project) => (
+                                <div
+                                    key={project.id}
+                                    className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 hover:shadow-sm cursor-pointer transition-all duration-200"
+                                >
+                                    <div className={`h-10 w-10 rounded-lg ${project.color} flex items-center justify-center text-white font-semibold`}>
+                                        {project.name[0]}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-medium">{project.name}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {project.description || "No description"}
+                                        </p>
+                                    </div>
+                                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
                                 </div>
-                                <div className="flex-1">
-                                    <p className="font-medium">{project.name}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {project.tasks} tasks • {project.members} members
-                                    </p>
-                                </div>
-                                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

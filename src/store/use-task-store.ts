@@ -41,6 +41,7 @@ interface TaskStore {
 
     // Tasks list (mock data for now)
     tasks: Task[]
+    setTasks: (tasks: Task[]) => void
     addTask: (task: Task) => void
     updateTask: (id: string, updates: Partial<Task>) => void
     deleteTask: (id: string) => void
@@ -64,11 +65,9 @@ export const useTaskStore = create<TaskStore>((set) => ({
     closeCreateDialog: () => set({ isCreateDialogOpen: false }),
 
     // Tasks
-    tasks: [
-        { id: '1', name: 'Research competitors', priority: 'high', dueDate: 'Tomorrow', commentCount: 2, assignee: { name: 'Alice' }, status: 'todo' },
-        { id: '2', name: 'Draft project brief', priority: 'medium', dueDate: 'Fri', attachmentCount: 1, assignee: { name: 'Bob' }, status: 'todo' },
-        { id: '3', name: 'Design homepage', priority: 'high', dueDate: 'Next Week', tags: ['Design'], assignee: { name: 'Charlie' }, status: 'in-progress' },
-    ],
+    // Tasks
+    tasks: [],
+    setTasks: (tasks) => set({ tasks }),
     addTask: (task) => set((state) => ({ tasks: [...state.tasks, task] })),
     updateTask: (id, updates) =>
         set((state) => {

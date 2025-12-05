@@ -20,55 +20,8 @@ export default function ClientsPage() {
 
     const loadClients = async () => {
         try {
-            // Dummy clients data
-            const dummyClients = [
-                {
-                    id: '1',
-                    name: 'Acme Corporation',
-                    email: 'contact@acme.com',
-                    budget: 50000,
-                    tier: 'Enterprise',
-                    website: 'https://acme.com',
-                    drive_folder: 'https://drive.google.com/drive/folders/acme'
-                },
-                {
-                    id: '2',
-                    name: 'TechStart Inc',
-                    email: 'hello@techstart.io',
-                    budget: 25000,
-                    tier: 'Professional',
-                    website: 'https://techstart.io',
-                    drive_folder: 'https://drive.google.com/drive/folders/techstart'
-                },
-                {
-                    id: '3',
-                    name: 'Global Solutions Ltd',
-                    email: 'info@globalsolutions.com',
-                    budget: 75000,
-                    tier: 'Enterprise',
-                    website: 'https://globalsolutions.com',
-                    drive_folder: 'https://drive.google.com/drive/folders/global'
-                },
-                {
-                    id: '4',
-                    name: 'Creative Agency',
-                    email: 'team@creativeagency.design',
-                    budget: 15000,
-                    tier: 'Basic',
-                    website: 'https://creativeagency.design',
-                    drive_folder: 'https://drive.google.com/drive/folders/creative'
-                },
-                {
-                    id: '5',
-                    name: 'Innovate Labs',
-                    email: 'contact@innovatelabs.tech',
-                    budget: 40000,
-                    tier: 'Professional',
-                    website: 'https://innovatelabs.tech',
-                    drive_folder: 'https://drive.google.com/drive/folders/innovate'
-                }
-            ]
-            setClients(dummyClients)
+            const data = await getClients(workspaceId)
+            setClients(data || [])
             setLoading(false)
         } catch (error) {
             console.error("Failed to load clients", error)
