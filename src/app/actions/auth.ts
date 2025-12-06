@@ -25,8 +25,8 @@ export async function login(formData: FormData) {
 
 export async function signup(formData: FormData) {
     const supabase = await createClient()
-    // Prefer NEXT_PUBLIC_SITE_URL if available (Vercel), otherwise fallback to origin
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin || 'http://localhost:3000'
+    // Prefer NEXT_PUBLIC_SITE_URL, then origin, then fallback to production URL
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin || 'https://asana-app-six.vercel.app'
 
     const data = {
         email: formData.get('email') as string,
