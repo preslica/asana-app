@@ -39,6 +39,9 @@ import {
     Clock,
 } from 'lucide-react'
 import { useTaskStore } from '@/store/use-task-store'
+import { useUserStore } from '@/store/use-user-store'
+import { useWorkspaceStore } from '@/store/use-workspace-store'
+import { getWorkspaceMembers } from '@/lib/api'
 
 export function TaskDrawer() {
     const {
@@ -63,10 +66,25 @@ export function TaskDrawer() {
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
     const [mounted, setMounted] = useState(false)
+    const { user } = useUserStore()
+    const { currentWorkspace } = useWorkspaceStore()
+    const [members, setMembers] = useState<any[]>([])
 
     useEffect(() => {
-        setMounted(true)
-    }, [])
+        if (currentWorkspace) {
+            getWorkspaceMembers(currentWorkspace.id).then(data => {
+                const formattedMembers = data?.map((m: any) => ({
+                    id: m.user.id,
+                    name: m.user.full_name || 'Unnamed User',
+                    email: m.user.email,
+                    avatar: m.user.avatar_url,
+                })) || []
+                setMembers(formattedMembers)
+            })
+        }
+    }, [currentWorkspace])
+
+
 
     // Sync state when selectedTask changes
     useEffect(() => {
@@ -129,7 +147,7 @@ export function TaskDrawer() {
 
         setComments(prev => [...prev, {
             id: Math.random().toString(36).substr(2, 9),
-            author: 'Current User',
+            author: user?.full_name || 'User',
             text: newComment,
             timestamp: new Date()
         }])
@@ -247,9 +265,9 @@ export function TaskDrawer() {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                    <SelectItem value="John Doe">John Doe</SelectItem>
-                                                    <SelectItem value="Alice Smith">Alice Smith</SelectItem>
-                                                    <SelectItem value="Bob Jones">Bob Jones</SelectItem>
+                                                    {members.map(member => (
+                                                        <SelectItem key={member.id} value={member.name}>{member.name}</SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
 
@@ -351,9 +369,9 @@ export function TaskDrawer() {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                                            <SelectItem value="John Doe">John Doe</SelectItem>
-                                            <SelectItem value="Alice Smith">Alice Smith</SelectItem>
-                                            <SelectItem value="Bob Jones">Bob Jones</SelectItem>
+                                            {members.map(member => (
+                                                <SelectItem key={member.id} value={member.name}>{member.name}</SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>

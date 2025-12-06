@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Menu, Search, Plus, LogOut } from 'lucide-react'
 import { useSidebarStore } from '@/store/use-sidebar-store'
 import { useTaskStore } from '@/store/use-task-store'
+import { useUserStore } from '@/store/use-user-store'
 import { CreateTaskDialog } from '@/components/feature/create-task-dialog'
 import { TaskSearch } from '@/components/search/task-search'
 import { logout } from '@/app/actions/auth'
@@ -22,6 +23,7 @@ import { logout } from '@/app/actions/auth'
 export function Header() {
     const { toggle } = useSidebarStore()
     const { openCreateDialog } = useTaskStore()
+    const { user } = useUserStore()
 
     return (
         <>
@@ -54,8 +56,8 @@ export function Header() {
                     <DropdownMenuTrigger asChild>
                         <Button variant="secondary" size="icon" className="rounded-full">
                             <Avatar className="h-8 w-8">
-                                <AvatarImage src="/placeholder-user.jpg" alt="@user" />
-                                <AvatarFallback>U</AvatarFallback>
+                                <AvatarImage src={user?.avatar_url || "/placeholder-user.jpg"} alt={user?.full_name || "@user"} />
+                                <AvatarFallback>{user?.full_name ? user.full_name[0] : "U"}</AvatarFallback>
                             </Avatar>
                             <span className="sr-only">Toggle user menu</span>
                         </Button>

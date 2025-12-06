@@ -20,6 +20,9 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Mail } from 'lucide-react'
+import { addMemberByEmail } from '@/lib/api'
+import { useWorkspaceStore } from '@/store/use-workspace-store'
+import { toast } from 'sonner'
 
 interface InviteMemberDialogProps {
     open: boolean
@@ -30,24 +33,31 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
     const [email, setEmail] = useState('')
     const [role, setRole] = useState<'admin' | 'member'>('member')
     const [loading, setLoading] = useState(false)
+    const { currentWorkspace } = useWorkspaceStore()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!email) return
+        if (!email || !currentWorkspace) return
 
         setLoading(true)
-
-        // TODO: Send invitation email via API
-        console.log('Sending invitation to:', { email, role })
-
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        // Reset and close
-        setEmail('')
-        setRole('member')
-        setLoading(false)
-        onOpenChange(false)
+        try {
+            await addMemberByEmail(currentWorkspace.id, email)
+            toast.success("Member added successfully")
+            setEmail('')
+            setRole('member')
+            onOpenChange(false)
+        } catch (error: any) {
+            console.error('Failed to invite member:', error)
+            if (error.message === 'User not found') {
+                toast.error("User not found. Ask them to sign up first.")
+            } else if (error.message === 'User is already a member') {
+                toast.error("User is already a member of this workspace")
+            } else {
+                toast.error("Failed to add member")
+            }
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (

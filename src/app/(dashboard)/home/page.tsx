@@ -8,6 +8,7 @@ import { Calendar, CheckCircle2, Plus, TrendingUp, Clock, AlertCircle } from 'lu
 import { useTaskStore } from '@/store/use-task-store'
 import { useWorkspaceStore } from '@/store/use-workspace-store'
 import { useProjectStore } from '@/store/use-project-store'
+import { useUserStore } from '@/store/use-user-store'
 import { cn } from '@/lib/utils'
 import { DashboardCharts } from '@/components/analytics/dashboard-charts'
 import { CreateWorkspaceDialog } from '@/components/workspace/create-workspace-dialog'
@@ -22,6 +23,7 @@ export default function HomePage() {
     const { tasks, openCreateDialog, openDrawer } = useTaskStore()
     const { currentWorkspace } = useWorkspaceStore()
     const { projects } = useProjectStore()
+    const { user } = useUserStore()
 
     // Calculate stats
     const completedTasks = tasks.filter(t => t.completed).length
@@ -52,10 +54,9 @@ export default function HomePage() {
                     <h1 className="text-lg font-semibold md:text-2xl">
                         {(() => {
                             const hour = new Date().getHours()
-                            if (hour < 12) return "Good Morning"
                             if (hour < 18) return "Good Afternoon"
                             return "Good Evening"
-                        })()}, User
+                        })()}, {user?.full_name?.split(' ')[0] || "User"}
                     </h1>
                     <p className="text-sm text-muted-foreground">
                         Here's what's happening today in {currentWorkspace.name}.

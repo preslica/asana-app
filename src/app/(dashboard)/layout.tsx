@@ -7,6 +7,9 @@ import { useSidebarStore } from '@/store/use-sidebar-store'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { CreateProjectDialog } from '@/components/feature/create-project-dialog'
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
+import { useUserStore } from '@/store/use-user-store'
+import { getCurrentProfile } from '@/lib/api'
+import { useEffect } from 'react'
 
 export default function DashboardLayout({
     children,
@@ -17,6 +20,18 @@ export default function DashboardLayout({
 
     // Enable keyboard shortcuts
     useKeyboardShortcuts()
+
+    const { setUser } = useUserStore()
+
+    useEffect(() => {
+        const loadUser = async () => {
+            const user = await getCurrentProfile()
+            if (user) {
+                setUser(user)
+            }
+        }
+        loadUser()
+    }, [setUser])
 
     return (
         <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">

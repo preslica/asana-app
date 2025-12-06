@@ -22,6 +22,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Copy, Link2, Mail, Trash2, Check } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { useWorkspaceStore } from '@/store/use-workspace-store'
+import { useUserStore } from '@/store/use-user-store'
+import { addMemberByEmail } from '@/lib/api'
+import { toast } from 'sonner'
 
 interface ShareDialogProps {
     open: boolean
@@ -35,24 +39,31 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
     const projectLink = typeof window !== 'undefined' ? window.location.href : ''
 
+    const { currentWorkspace } = useWorkspaceStore()
+    const { user } = useUserStore()
+
     const handleCopyLink = () => {
         navigator.clipboard.writeText(projectLink)
         setLinkCopied(true)
+        toast.success("Link copied to clipboard")
         setTimeout(() => setLinkCopied(false), 2000)
     }
 
-    const handleInvite = () => {
-        if (!email) return
-        // TODO: Send invitation
-        console.log('Inviting:', email, 'with permission:', permission)
-        setEmail('')
+    const handleInvite = async () => {
+        if (!email || !currentWorkspace) return
+
+        try {
+            await addMemberByEmail(currentWorkspace.id, email)
+            toast.success("Invitation sent successfully")
+            setEmail('')
+        } catch (error: any) {
+            console.error('Failed to invite:', error)
+            toast.error(error.message || "Failed to send invitation")
+        }
     }
 
-    // Mock collaborators
-    const collaborators = [
-        { id: '1', name: 'John Doe', email: 'john@example.com', permission: 'edit', avatar: '/placeholder.jpg' },
-        { id: '2', name: 'Alice Smith', email: 'alice@example.com', permission: 'view', avatar: '/placeholder.jpg' },
-    ]
+    // For now, we don't list all 1000s of members here, but you could fetch them if needed.
+    // const collaborators = ...
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,34 +136,11 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                         </div>
                     </div>
 
-                    {/* Current Collaborators */}
-                    <div className="grid gap-3">
-                        <Label>Collaborators ({collaborators.length})</Label>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                            {collaborators.map((collab) => (
-                                <div key={collab.id} className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
-                                    <div className="flex items-center gap-3">
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src={collab.avatar} />
-                                            <AvatarFallback>{collab.name[0]}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="text-sm font-medium">{collab.name}</p>
-                                            <p className="text-xs text-muted-foreground">{collab.email}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Badge variant="outline" className="capitalize">
-                                            {collab.permission}
-                                        </Badge>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    {/* Current Collaborators - Hidden for now as it lists all workspace members */}
+                    {/* <div className="grid gap-3">
+                        <Label>Collaborators</Label>
+                        ...
+                    </div> */}
                 </div>
 
                 <DialogFooter>
