@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createWorkspace } from "@/lib/api"
+import { useWorkspaceStore } from "@/store/use-workspace-store"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
@@ -15,12 +16,14 @@ export function CreateWorkspaceDialog({ onWorkspaceCreated }: { onWorkspaceCreat
     const [name, setName] = useState("")
     const [loading, setLoading] = useState(false)
     const router = useRouter()
+    const { addWorkspace } = useWorkspaceStore()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
         try {
-            await createWorkspace({ name })
+            const newWorkspace = await createWorkspace({ name })
+            addWorkspace(newWorkspace)
             setOpen(false)
             setName("")
             router.refresh()
