@@ -52,27 +52,11 @@ export async function createWorkspace(data: { name: string }) {
     const user = (await supabase.auth.getUser()).data.user
     if (!user) throw new Error("Not authenticated")
 
+    // Use the RPC for atomic creation
     const { data: workspace, error } = await supabase
-        .from("workspaces")
-        .insert([{
-            name: data.name,
-            owner_id: user.id
-        }])
-        .select()
-        .single()
+        .rpc('create_workspace_safe', { name: data.name })
 
     if (error) throw error
-
-    // Add creator as admin member
-    const { error: memberError } = await supabase
-        .from("workspace_members")
-        .insert([{
-            workspace_id: workspace.id,
-            user_id: user.id,
-            role: 'owner'
-        }])
-
-    if (memberError) throw memberError
 
     return workspace
 }
