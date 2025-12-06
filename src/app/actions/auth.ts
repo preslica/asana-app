@@ -25,13 +25,14 @@ export async function login(formData: FormData) {
 
 export async function signup(formData: FormData) {
     const supabase = await createClient()
-    const origin = (await headers()).get('origin')
+    // Prefer NEXT_PUBLIC_SITE_URL if available (Vercel), otherwise fallback to origin
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin || 'http://localhost:3000'
 
     const data = {
         email: formData.get('email') as string,
         password: formData.get('password') as string,
         options: {
-            emailRedirectTo: `${origin}/auth/callback`,
+            emailRedirectTo: `${siteUrl}/auth/callback`,
             data: {
                 full_name: formData.get('full_name') as string,
             },
