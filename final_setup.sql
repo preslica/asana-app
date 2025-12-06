@@ -136,6 +136,7 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 -- Helper: Is Workspace Member?
+drop function if exists public.is_workspace_member(uuid);
 create or replace function public.is_workspace_member(workspace_id uuid)
 returns boolean as $$
 begin
@@ -149,6 +150,7 @@ end;
 $$ language plpgsql security definer;
 
 -- RPC: Create Workspace Safe (Transactions)
+drop function if exists public.create_workspace_safe(text);
 create or replace function public.create_workspace_safe(name text)
 returns json as $$
 declare
