@@ -295,3 +295,80 @@ export async function getWorkspaceTasks(workspaceId: string) {
     if (error) throw error
     return data
 }
+
+export async function getTask(taskId: string) {
+    const supabase = createSupabaseClient()
+    const { data, error } = await supabase
+        .from("tasks")
+        .select(`
+            *,
+            project:projects(name),
+            assignee:users(full_name, avatar_url)
+        `)
+        .eq("id", taskId)
+        .single()
+
+    if (error) throw error
+    return data
+}
+
+export async function updateTask(taskId: string, updates: any) {
+    const supabase = createSupabaseClient()
+
+    // Normalize updates if needed (e.g. camelCase to snake_case)
+    const dbUpdates: any = { ...updates }
+    if (updates.dueDate) {
+        dbUpdates.due_date = updates.dueDate
+        delete dbUpdates.dueDate
+    }
+
+    const { data, error } = await supabase
+        .from("tasks")
+        .update(dbUpdates)
+        .eq("id", taskId)
+        .select()
+        .single()
+
+    if (error) throw error
+    return data
+}
+
+export async function getSubtasks(taskId: string) {
+    const supabase = createSupabaseClient()
+    const { data, error } = await supabase
+        .from("tasks")
+        .select(`
+            *,
+            assignee:users(full_name, avatar_url)
+        `)
+        .eq("parent_id", taskId)
+        .order("created_at", { ascending: true })
+
+    if (error) throw error
+    return data
+}
+
+export async function createSubtask(parentId: string, name: string, assignedTo?: string) {
+    const supabase = createSupabaseClient()
+    const user = (await supabase.auth.getUser()).data.user
+    if (!user) throw new Error("Not authenticated")
+
+    const { data: parent } = await supabase.from("tasks").select("workspace_id").eq("id", parentId).single()
+    if (!parent) throw new Error("Parent task not found")
+
+    const { data, error } = await supabase
+        .from("tasks")
+        .insert([{
+            name,
+            parent_id: parentId,
+            workspace_id: parent.workspace_id,
+            created_by: user.id,
+            status: 'todo',
+            assignee_id: assignedTo
+        }])
+        .select(`*, assignee:users(full_name, avatar_url)`)
+        .single()
+
+    if (error) throw error
+    return data
+}
