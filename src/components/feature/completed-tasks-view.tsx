@@ -7,28 +7,47 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { CheckCircle2, Calendar } from 'lucide-react'
 import { format } from 'date-fns'
-
-// Mock data - replace with real data from store/backend
-const completedTasks = [
-    { id: '1', name: 'Design System Update', completedAt: new Date(), assignee: { name: 'Alice Smith', avatar: '/placeholder.jpg' }, project: 'Design' },
-    { id: '2', name: 'Q4 Marketing Plan', completedAt: new Date(Date.now() - 86400000), assignee: { name: 'John Doe', avatar: '/placeholder-user.jpg' }, project: 'Marketing' },
-    { id: '3', name: 'Fix Navigation Bug', completedAt: new Date(Date.now() - 172800000), assignee: { name: 'Bob Jones', avatar: '/placeholder.jpg' }, project: 'Engineering' },
-    { id: '4', name: 'Client Meeting Prep', completedAt: new Date(), assignee: { name: 'John Doe', avatar: '/placeholder-user.jpg' }, project: 'Sales' },
-]
+import { getCompletedTasks } from '@/lib/api'
+import { useWorkspaceStore } from '@/store/use-workspace-store'
+import { useUserStore } from '@/store/use-user-store'
+import { useEffect } from 'react'
 
 export function CompletedTasksView() {
     const [filter, setFilter] = useState<'org' | 'me'>('org')
+    const [tasks, setTasks] = useState<any[]>([])
+    const { currentWorkspace } = useWorkspaceStore()
+    const { user } = useUserStore()
+
+    useEffect(() => {
+        if (currentWorkspace) {
+            getCompletedTasks(currentWorkspace.id).then(data => {
+                const mapped = data?.map((t: any) => ({
+                    id: t.id,
+                    name: t.name,
+                    completedAt: t.completed_at ? new Date(t.completed_at) : new Date(t.updated_at), // Fallback
+                    assignee: {
+                        id: t.assignee?.id,
+                        name: t.assignee?.full_name || 'Unassigned',
+                        avatar: t.assignee?.avatar_url
+                    },
+                    project: t.project?.name || 'No Project'
+                })) || []
+                setTasks(mapped)
+            })
+        }
+    }, [currentWorkspace])
 
     const filteredTasks = filter === 'org'
-        ? completedTasks
-        : completedTasks.filter(t => t.assignee.name === 'John Doe') // Mock current user
+        ? tasks
+        : tasks.filter(t => t.assignee.id === user?.id)
 
-    const groupedTasks = filteredTasks.reduce((acc, task) => {
+    const groupedTasks = filteredTasks.reduce((acc: any, task: any) => {
+        if (!task.completedAt) return acc
         const dateKey = format(task.completedAt, 'yyyy-MM-dd')
         if (!acc[dateKey]) acc[dateKey] = []
         acc[dateKey].push(task)
         return acc
-    }, {} as Record<string, typeof completedTasks>)
+    }, {} as Record<string, any[]>)
 
     return (
         <Card className="h-full border-0 shadow-none bg-transparent">

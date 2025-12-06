@@ -7,6 +7,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Calendar, CheckCircle2, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTaskStore } from '@/store/use-task-store'
+import { useWorkspaceStore } from '@/store/use-workspace-store'
+import { useUserStore } from '@/store/use-user-store'
+import { getUserTasks } from '@/lib/api'
+import { useEffect, useState } from 'react'
 
 const priorityColors = {
     low: 'bg-blue-100 text-blue-800',
@@ -15,54 +19,50 @@ const priorityColors = {
 }
 
 export default function MyTasksPage() {
-    const { tasks, openCreateDialog, openDrawer } = useTaskStore()
+    const { openCreateDialog, openDrawer } = useTaskStore()
+    const { currentWorkspace } = useWorkspaceStore()
+    const { user } = useUserStore()
+    const [myTasks, setMyTasks] = useState<any[]>([])
 
-    // Mock current user
-    const currentUser = { name: 'John Doe' }
-
-    // Flatten tasks and assigned subtasks
-    const allMyTasks = tasks.reduce((acc: any[], task) => {
-        // Add task if assigned to user
-        if (task.assignee?.name === currentUser.name) {
-            acc.push(task)
-        }
-
-        // Add subtasks if assigned to user
-        task.subtasks?.forEach(subtask => {
-            if (subtask.assignee?.name === currentUser.name) {
-                acc.push({
-                    ...subtask,
-                    id: subtask.id,
-                    name: subtask.name,
-                    priority: task.priority, // Inherit priority or default
-                    project: task.project, // Inherit project
-                    dueDate: 'No Date', // Subtasks might not have due dates yet
-                    isSubtask: true,
-                    parentTaskName: task.name,
-                    parentId: task.id
-                })
+    // Fetch tasks from API
+    useEffect(() => {
+        const fetchTasks = async () => {
+            if (currentWorkspace?.id && user?.id) {
+                try {
+                    const data = await getUserTasks(currentWorkspace.id, user.id)
+                    setMyTasks(data || [])
+                } catch (error) {
+                    console.error("Failed to fetch my tasks", error)
+                }
             }
-        })
-
-        return acc
-    }, [])
+        }
+        fetchTasks()
+    }, [currentWorkspace?.id, user?.id])
 
     // Group tasks by section
     const sections = [
         {
             id: 'today',
             title: 'Today',
-            tasks: allMyTasks.filter(task => task.dueDate === 'Today' || !task.dueDate)
+            tasks: myTasks.filter(task => { // Naive "Today" check or improve with date libs
+                if (!task.due_date) return false
+                const today = new Date().toISOString().split('T')[0]
+                return task.due_date.startsWith(today)
+            })
         },
         {
             id: 'upcoming',
             title: 'Upcoming',
-            tasks: allMyTasks.filter(task => task.dueDate && task.dueDate !== 'Today')
+            tasks: myTasks.filter(task => {
+                if (!task.due_date) return true // Treat no-date as upcoming or separate?
+                const today = new Date().toISOString().split('T')[0]
+                return task.due_date > today
+            })
         },
         {
             id: 'later',
             title: 'Later',
-            tasks: []
+            tasks: [] // Implement specific logic if needed
         }
     ]
 
@@ -87,6 +87,9 @@ export default function MyTasksPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-2">
+                                {section.tasks.length === 0 && (
+                                    <p className="text-sm text-muted-foreground p-2">No tasks</p>
+                                )}
                                 {section.tasks.map((task) => (
                                     <div
                                         key={task.id}
@@ -97,20 +100,15 @@ export default function MyTasksPage() {
                                         <div className="flex-1">
                                             <p className="text-sm font-medium">
                                                 {task.name}
-                                                {task.isSubtask && (
-                                                    <span className="ml-2 text-xs text-muted-foreground font-normal">
-                                                        (Subtask of {task.parentTaskName})
-                                                    </span>
-                                                )}
                                             </p>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-xs text-muted-foreground">{task.project || 'Inbox'}</span>
-                                                {task.dueDate && (
+                                                <span className="text-xs text-muted-foreground">{task.project?.name || 'No Project'}</span>
+                                                {task.due_date && (
                                                     <>
                                                         <span className="text-xs text-muted-foreground">•</span>
                                                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                                             <Calendar className="h-3 w-3" />
-                                                            <span>{task.dueDate}</span>
+                                                            <span>{new Date(task.due_date).toLocaleDateString()}</span>
                                                         </div>
                                                     </>
                                                 )}

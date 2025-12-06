@@ -146,6 +146,16 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
+-- 4b. Backfill existing users (CRITICAL for valid FKs)
+insert into public.users (id, email, full_name, avatar_url)
+select 
+  id, 
+  email, 
+  coalesce(raw_user_meta_data->>'full_name', split_part(email, '@', 1)), 
+  raw_user_meta_data->>'avatar_url'
+from auth.users
+on conflict (id) do nothing;
+
 -- Helper: Is Workspace Member?
 drop function if exists public.is_workspace_member(uuid) cascade; -- Added cascade
 create or replace function public.is_workspace_member(workspace_id uuid)

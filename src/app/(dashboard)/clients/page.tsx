@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getClients, deleteClient } from "@/lib/api"
 import { Plus, Trash2, ExternalLink, Pencil } from "lucide-react"
+import { useWorkspaceStore } from "@/store/use-workspace-store"
 
 export default function ClientsPage() {
+    const { currentWorkspace } = useWorkspaceStore()
+    const workspaceId = currentWorkspace?.id
     const [clients, setClients] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
-    // TODO: Get actual workspace ID from store or context.
-    const workspaceId = "default-workspace-id"
 
     useEffect(() => {
         loadClients()
@@ -44,12 +45,14 @@ export default function ClientsPage() {
             <div className="flex items-center justify-between space-y-2">
                 <h2 className="text-3xl font-bold tracking-tight">Clients</h2>
                 <div className="flex items-center space-x-2">
-                    <ClientImport workspaceId={workspaceId} onSuccess={loadClients} />
-                    <ClientDialog workspaceId={workspaceId} onSuccess={loadClients}>
-                        <Button>
-                            <Plus className="mr-2 h-4 w-4" /> Add Client
-                        </Button>
-                    </ClientDialog>
+                    {workspaceId && <ClientImport workspaceId={workspaceId} onSuccess={loadClients} />}
+                    {workspaceId && (
+                        <ClientDialog workspaceId={workspaceId} onSuccess={loadClients}>
+                            <Button>
+                                <Plus className="mr-2 h-4 w-4" /> Add Client
+                            </Button>
+                        </ClientDialog>
+                    )}
                 </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

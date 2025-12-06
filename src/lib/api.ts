@@ -220,3 +220,78 @@ export async function getCurrentProfile() {
 
     return data
 }
+
+export async function getUserTasks(workspaceId: string, userId: string) {
+    const supabase = createSupabaseClient()
+    const { data, error } = await supabase
+        .from("tasks")
+        .select(`
+            *,
+            project:projects(name),
+            assignee:users(full_name, avatar_url)
+        `)
+        .eq("workspace_id", workspaceId)
+        .eq("assignee_id", userId)
+        .order("due_date", { ascending: true })
+
+    if (error) throw error
+    return data
+}
+
+export async function getRecentActivity(workspaceId: string, userId: string) {
+    const supabase = createSupabaseClient()
+    // Fetch comments on tasks assigned to the user or created by the user
+    // This is a simplified "Inbox" based on comments.
+    const { data, error } = await supabase
+        .from("comments")
+        .select(`
+            *,
+            task:tasks!inner(
+                id, 
+                name, 
+                assignee_id, 
+                created_by,
+                project:projects(name)
+            ),
+            user:users(full_name, avatar_url)
+        `)
+        .eq("task.workspace_id", workspaceId)
+        .order("created_at", { ascending: false })
+        .limit(20)
+
+    if (error) throw error
+    // Filter client-side for relevance if needed, or refine query
+    return data
+}
+
+export async function getCompletedTasks(workspaceId: string) {
+    const supabase = createSupabaseClient()
+    const { data, error } = await supabase
+        .from("tasks")
+        .select(`
+            *,
+            project:projects(name),
+            assignee:users(full_name, avatar_url)
+        `)
+        .eq("workspace_id", workspaceId)
+        .eq("status", "completed")
+        .order("completed_at", { ascending: false })
+        .limit(100) // Limit to last 100 for performance
+
+    if (error) throw error
+    return data
+}
+
+export async function getWorkspaceTasks(workspaceId: string) {
+    const supabase = createSupabaseClient()
+    const { data, error } = await supabase
+        .from("tasks")
+        .select(`
+            *,
+            assignee:users(id)
+        `)
+        .eq("workspace_id", workspaceId)
+
+    if (error) throw error
+    return data
+}

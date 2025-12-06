@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Bell, CheckCheck, Archive } from 'lucide-react'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useWorkspaceStore } from '@/store/use-workspace-store'
+import { useUserStore } from '@/store/use-user-store'
+import { getRecentActivity } from '@/lib/api'
 
 const initialNotifications = [
     {
@@ -43,7 +46,35 @@ const initialNotifications = [
 ]
 
 export default function InboxPage() {
-    const [notifications, setNotifications] = useState(initialNotifications)
+    const [notifications, setNotifications] = useState<any[]>([])
+    const [filter, setFilter] = useState('all') // 'all', 'unread', etc.
+    const { currentWorkspace } = useWorkspaceStore()
+    const { user } = useUserStore()
+
+    useEffect(() => {
+        const loadActivity = async () => {
+            if (currentWorkspace?.id && user?.id) {
+                try {
+                    const data = await getRecentActivity(currentWorkspace.id, user.id)
+                    // Transform to notification shape
+                    const mapped = data?.map((item: any) => ({
+                        id: item.id,
+                        type: 'comment',
+                        user: { name: item.user?.full_name || 'Unknown', avatarUrl: item.user?.avatar_url },
+                        message: 'commented on',
+                        task: item.task?.name,
+                        project: item.task?.project?.name,
+                        time: new Date(item.created_at).toLocaleString(),
+                        unread: true // Logic for unread not yet fully implemented
+                    })) || []
+                    setNotifications(mapped)
+                } catch (error) {
+                    console.error("Failed to load inbox", error)
+                }
+            }
+        }
+        loadActivity()
+    }, [currentWorkspace?.id, user?.id])
 
     const markAllAsRead = () => {
         setNotifications(prev => prev.map(n => ({ ...n, unread: false })))
@@ -75,12 +106,10 @@ export default function InboxPage() {
                 </div>
             </div>
 
-            <Tabs defaultValue="all" className="w-full">
+            <Tabs defaultValue="all" className="w-full" onValueChange={setFilter}>
                 <TabsList>
                     <TabsTrigger value="all">All</TabsTrigger>
                     <TabsTrigger value="unread">Unread</TabsTrigger>
-                    <TabsTrigger value="mentions">Mentions</TabsTrigger>
-                    <TabsTrigger value="assigned">Assigned</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="all" className="mt-4">
@@ -154,18 +183,6 @@ export default function InboxPage() {
                                 </Card>
                             ))
                         )}
-                    </div>
-                </TabsContent>
-
-                <TabsContent value="mentions" className="mt-4">
-                    <div className="flex items-center justify-center h-40 text-muted-foreground">
-                        No mentions
-                    </div>
-                </TabsContent>
-
-                <TabsContent value="assigned" className="mt-4">
-                    <div className="flex items-center justify-center h-40 text-muted-foreground">
-                        No assignments
                     </div>
                 </TabsContent>
             </Tabs>
