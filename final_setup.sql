@@ -4,12 +4,13 @@
 -- Run this script in the Supabase SQL Editor to reset/setup your database.
 -- WARNING: This will drop existing tables and data in the public schema!
 
--- 1. Helper to clean up (Optional: comment out if you want to keep data)
+-- 1. Helper to clean up
 drop table if exists public.comments cascade;
 drop table if exists public.tasks cascade;
 drop table if exists public.sections cascade;
 drop table if exists public.projects cascade;
 drop table if exists public.teams cascade;
+drop table if exists public.clients cascade; -- Added clients
 drop table if exists public.workspace_members cascade;
 drop table if exists public.workspaces cascade;
 drop table if exists public.users cascade;
@@ -45,7 +46,7 @@ create table public.workspaces (
 create table public.workspace_members (
   workspace_id uuid references public.workspaces(id) not null,
   user_id uuid references public.users(id) not null,
-  role text default 'member', -- 'owner', 'admin', 'member', 'guest'
+  role text default 'member', 
   primary key (workspace_id, user_id)
 );
 
@@ -108,6 +109,16 @@ create table public.comments (
   created_at timestamptz default now()
 );
 
+-- Clients (Added)
+create table public.clients (
+  id uuid default gen_random_uuid() primary key,
+  workspace_id uuid references public.workspaces(id) not null,
+  name text not null,
+  email text,
+  status text default 'active',
+  created_at timestamptz default now()
+);
+
 -- 4. Functions & Triggers
 
 -- Handle New User (Trigger)
@@ -136,7 +147,7 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 -- Helper: Is Workspace Member?
-drop function if exists public.is_workspace_member(uuid);
+drop function if exists public.is_workspace_member(uuid) cascade; -- Added cascade
 create or replace function public.is_workspace_member(workspace_id uuid)
 returns boolean as $$
 begin
@@ -150,7 +161,7 @@ end;
 $$ language plpgsql security definer;
 
 -- RPC: Create Workspace Safe (Transactions)
-drop function if exists public.create_workspace_safe(text);
+drop function if exists public.create_workspace_safe(text) cascade; -- Added cascade
 create or replace function public.create_workspace_safe(name text)
 returns json as $$
 declare
@@ -183,6 +194,7 @@ alter table public.projects enable row level security;
 alter table public.sections enable row level security;
 alter table public.tasks enable row level security;
 alter table public.comments enable row level security;
+alter table public.clients enable row level security; -- Added
 
 -- Users Logic
 create policy "Users can view their own profile" on public.users for select using (auth.uid() = id);
@@ -267,5 +279,13 @@ create policy "Create comments in workspace" on public.comments for insert with 
     where t.id = comments.task_id
     and wm.user_id = auth.uid()
   )
+);
+
+-- Clients
+create policy "View clients in workspace" on public.clients for select using (
+  exists (select 1 from public.workspace_members where workspace_id = clients.workspace_id and user_id = auth.uid())
+);
+create policy "Manage clients in workspace" on public.clients for all using (
+  exists (select 1 from public.workspace_members where workspace_id = clients.workspace_id and user_id = auth.uid())
 );
 
