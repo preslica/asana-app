@@ -209,6 +209,27 @@ export async function getCurrentProfile() {
         .single()
 
     if (error) {
+        // If profile not found, try to create it using auth data (Self-healing)
+        if (error.code === 'PGRST116') { // PGRST116 is JSON object not found (single result)
+            console.log("Profile not found, attempting to create...")
+            const { data: newProfile, error: createError } = await supabase
+                .from("users")
+                .insert([{
+                    id: user.id,
+                    email: user.email,
+                    full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+                    avatar_url: user.user_metadata?.avatar_url
+                }])
+                .select()
+                .single()
+
+            if (createError) {
+                console.error("Failed to create profile:", createError)
+                return null
+            }
+            return newProfile
+        }
+
         console.error("Error fetching profile:", error)
         return null
     }

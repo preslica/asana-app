@@ -29,9 +29,9 @@ export function CreateWorkspaceDialog({ onWorkspaceCreated }: { onWorkspaceCreat
             router.refresh()
             toast.success("Workspace created successfully")
             onWorkspaceCreated?.()
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to create workspace", error)
-            toast.error("Failed to create workspace")
+            toast.error(error.message || "Failed to create workspace. Please try again.")
         } finally {
             setLoading(false)
         }
