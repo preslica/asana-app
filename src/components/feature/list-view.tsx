@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Calendar, CheckCircle2, MoreHorizontal, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTaskStore } from '@/store/use-task-store'
 import {
     DndContext,
     closestCenter,
@@ -96,11 +97,14 @@ function SortableRow({ task }: { task: Task }) {
         zIndex: isDragging ? 1 : 0,
     }
 
+    const { openDrawer } = useTaskStore()
+
     return (
         <TableRow
             ref={setNodeRef}
             style={style}
-            className="group hover:bg-muted/50"
+            className="group hover:bg-muted/50 cursor-pointer"
+            onClick={() => openDrawer(task as any)}
         >
             <TableCell className="w-[40px] p-0 pl-2">
                 <Button
