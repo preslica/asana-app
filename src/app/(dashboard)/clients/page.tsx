@@ -17,11 +17,15 @@ export default function ClientsPage() {
 
     useEffect(() => {
         loadClients()
-    }, [])
+    }, [workspaceId])
 
     const loadClients = async () => {
+        if (!workspaceId) {
+            setLoading(false)
+            return
+        }
         try {
-            const data = await getClients(workspaceId)
+            const data = await getClients(workspaceId as string)
             setClients(data || [])
             setLoading(false)
         } catch (error) {
@@ -63,7 +67,7 @@ export default function ClientsPage() {
                                 {client.name}
                             </CardTitle>
                             <div className="flex gap-1">
-                                <ClientDialog workspaceId={workspaceId} client={client} onSuccess={loadClients}>
+                                <ClientDialog workspaceId={workspaceId || ""} client={client} onSuccess={loadClients}>
                                     <Button variant="ghost" size="icon" className="h-8 w-8">
                                         <Pencil className="h-4 w-4 text-muted-foreground" />
                                     </Button>
