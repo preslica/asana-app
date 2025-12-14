@@ -69,7 +69,7 @@ export function CustomizeDialog({ open, onOpenChange }: CustomizeDialogProps) {
                 <DialogHeader>
                     <DialogTitle>Customize Project</DialogTitle>
                     <DialogDescription>
-                        Personalize your project's appearance and settings.
+                        Personalize your project&apos;s appearance and settings.
                     </DialogDescription>
                 </DialogHeader>
 
