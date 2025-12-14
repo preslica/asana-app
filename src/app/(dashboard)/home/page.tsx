@@ -59,7 +59,7 @@ export default function HomePage() {
                         })()}, {user?.full_name?.split(' ')[0] || "User"}
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Here's what's happening today in {currentWorkspace.name}.
+                        Here&apos;s what&apos;s happening today in {currentWorkspace.name}.
                     </p>
                 </div>
                 <Button
@@ -199,7 +199,7 @@ export default function HomePage() {
                 <CardHeader>
                     <CardTitle>Recent Projects</CardTitle>
                     <CardDescription>
-                        Projects you've worked on recently
+                        Projects you&apos;ve worked on recently
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

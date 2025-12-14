@@ -74,7 +74,7 @@ export function CompletedTasksView() {
                                     {format(new Date(date), 'EEEE, MMMM do')}
                                 </h3>
                                 <div className="space-y-2">
-                                    {tasks.map((task) => (
+                                    {(tasks as any[]).map((task) => (
                                         <div key={task.id} className="flex items-center justify-between p-3 rounded-lg border bg-card/50 hover:bg-accent/50 transition-colors">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center text-green-600">

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient as createSupabaseClient } from "@/lib/supabase/client"
 
 export async function createClient(clientData: any) {
@@ -238,7 +239,7 @@ export async function getUserTasks(workspaceId: string, userId: string) {
     return data
 }
 
-export async function getRecentActivity(workspaceId: string, userId: string) {
+export async function getRecentActivity(workspaceId: string, _userId: string) {
     const supabase = createSupabaseClient()
     // Fetch comments on tasks assigned to the user or created by the user
     // This is a simplified "Inbox" based on comments.
